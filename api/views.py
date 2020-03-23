@@ -25,7 +25,7 @@ class GroupViewSet(viewsets.ModelViewSet):
 
 class RoomViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows groups to be viewed or edited.
+    API endpoint that allows Rooms to be viewed or edited.
     """
     queryset = Room.objects.all()
     serializer_class = RoomsSerializer
