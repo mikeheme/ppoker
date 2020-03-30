@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
-from api.models import Room
+from api.models import Game
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -17,5 +17,5 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
 
 class RoomsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Room
+        model = Game
         fields = '__all__'

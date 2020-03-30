@@ -2,7 +2,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework import viewsets
 from rest_framework import permissions
 from api.serializers import UserSerializer, GroupSerializer, RoomsSerializer
-from api.models import Room
+from api.models import Game
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -27,5 +27,5 @@ class RoomViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows Rooms to be viewed or edited.
     """
-    queryset = Room.objects.all()
+    queryset = Game.objects.all()
     serializer_class = RoomsSerializer

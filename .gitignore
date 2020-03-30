@@ -31,3 +31,5 @@ MANIFEST
 .idea
 *.iml
 db.*
+.ipynb_checkpoints
+*.ipynb
