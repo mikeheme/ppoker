@@ -64,15 +64,6 @@ class CardDeckField(models.CharField):
         return str(value)
 
 
-class GameState(Enum):
-    NOT_STARTED = 'NOT_STARTED'
-    INITIALIZED = 'INITIALIZED'
-    USER_CARDS_DEALT = 'USER_CARDS_DEALT'
-    FLOP_DEALT = 'FLOP_DEALT'
-    TURN_DEALT = 'TURN_DEALT'
-    RIVER_DEALT = 'RIVER_DEALT'
-
-
 class Player(models.Model):
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
     chips = models.PositiveIntegerField(default=0)
@@ -81,6 +72,15 @@ class Player(models.Model):
 
 
 class Game(models.Model):
+
+    class GameState(models.TextChoices):
+        NOT_STARTED = 'NOT_STARTED'
+        INITIALIZED = 'INITIALIZED'
+        USER_CARDS_DEALT = 'USER_CARDS_DEALT'
+        FLOP_DEALT = 'FLOP_DEALT'
+        TURN_DEALT = 'TURN_DEALT'
+        RIVER_DEALT = 'RIVER_DEALT'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=150)
     is_active = models.BooleanField(default=False)
@@ -89,32 +89,49 @@ class Game(models.Model):
     small_blind = models.PositiveIntegerField(default=0)
     big_blind = models.PositiveIntegerField(default=0)
     starting_chips = models.PositiveIntegerField(default=0)
-    state = models.CharField(max_length=40, default=GameState.NOT_STARTED,
-                             choices=[(tag, tag.value) for tag in GameState])
+    state = models.CharField(
+        max_length=40,
+        default=GameState.NOT_STARTED,
+        choices=GameState.choices
+    )
     created_on = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.DO_NOTHING)
 
     def start_game(self, users, small_blind, big_blind, starting_chips):
-        if self.state != GameState.NOT_STARTED:
+        if self.state != self.GameState.NOT_STARTED:
             raise GameError(self.state, "Game has already started")
 
         self.small_blind = small_blind
         self.big_blind = big_blind
         self.starting_chips = starting_chips
         self.is_active = True
-        self.state = GameState.INITIALIZED
-        users.append(self.created_by)
-        for sit, user in enumerate(users):
-            player = Player.objects.create(
-                user=user,
-                is_admin=True if user == self.created_by else False,
-                chips=self.starting_chips,
-                sit_num=sit
-            )
-            player.save()
-            self.players.add(player)
+        self.state = self.GameState.INITIALIZED
+        self.sit_users(users)
         self.deck = CardDeck()
-        return self.save()
+        self.deck.shuffle()
+        self.save()
+
+    def get_occupied_sits(self):
+        return {player.sit_num for player in self.players.all()}
+
+    def get_free_sits(self):
+        return set(range(1, 11)) - self.get_occupied_sits()
+
+    def sit_users(self, users):
+        available_sits = self.get_free_sits()
+        if len(available_sits) - len(users) >= 0:
+            for user in users:
+                player = Player.objects.create(
+                    user=user,
+                    is_admin=True if user == self.created_by else False,
+                    chips=self.starting_chips,
+                    sit_num=available_sits.pop()
+                )
+                player.save()
+                self.players.add(player)
+        else:
+            raise GameError(self.state, f"Not enough available sits. {len(users)} users trying to sit and "
+                                        f"{len(available_sits)} available sits")
 
     def add_user(self):
         pass
